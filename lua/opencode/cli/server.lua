@@ -241,6 +241,7 @@ function M.get(launch)
       end
     end)
     :next(function(server_or_port) ---@param server_or_port number|opencode.cli.server.Server
+      print("[M.get] got server_or_port")
       local server
       local port
       if type(server_or_port) == "number" then
@@ -249,10 +250,13 @@ function M.get(launch)
         server = server_or_port
         port = server.port
       end
+      print("[M.get] port=", port, "server=", server)
       -- Use server directly, no need to re-verify with get_server
       -- get_first_server already verified the server responds
       local attach_info = server and { port = port, cwd = vim.fn.getcwd() } or nil
+      print("[M.get] calling provider.start with attach_info=", attach_info ~= nil)
       require("opencode.provider").start(attach_info)
+      print("[M.get] provider.start returned")
       return server or { port = port }
     end)
     :next(function(server) ---@param server opencode.cli.server.Server
