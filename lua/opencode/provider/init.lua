@@ -79,12 +79,15 @@ end
 ---Start `opencode` via the configured provider.
 ---@param attach_info? { port: number, cwd: string } If provided, uses `opencode attach` to connect to an existing server.
 function M.start(attach_info)
+  print("[provider.start] ENTER, attach_info=", attach_info and attach_info.port)
   local provider = require("opencode.config").provider
   if provider and provider.start then
     -- TODO: Subscribe immediately.
     -- Ideally, providers expose the PID of the process they started.
     -- Then we decompose server.lua code to go PID -> port (OS dependent... windows impl combines this with the PID step currently) -> server -> connect.
+    print("[provider.start] calling provider:start")
     provider:start(attach_info)
+    print("[provider.start] provider:start returned")
   else
     error("`provider.start` unavailable — run `:checkhealth opencode` for details", 0)
   end
