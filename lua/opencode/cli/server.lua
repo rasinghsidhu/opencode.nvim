@@ -172,28 +172,13 @@ local function get_all_servers()
   end)
 end
 
----@return Promise<opencode.cli.server.Server[]>
-function M.get_all_servers_in_nvim_cwd()
+---@return Promise<opencode.cli.server.Server|nil>
+function M.get_first_server()
   return get_all_servers():next(function(servers) ---@param servers opencode.cli.server.Server[]
-    local cwd_matching_servers = {}
-    local nvim_cwd = vim.fn.getcwd()
-    for _, server in ipairs(servers) do
-      -- Filter for servers in the same CWD as Neovim
-      local normalized_server_cwd = server.cwd
-      local normalized_nvim_cwd = nvim_cwd
-      if is_windows() then
-        -- On Windows, normalize to backslashes for consistent comparison
-        normalized_server_cwd = server.cwd:gsub("/", "\\")
-        normalized_nvim_cwd = nvim_cwd:gsub("/", "\\")
-      end
-      if normalized_nvim_cwd == normalized_server_cwd then
-        table.insert(cwd_matching_servers, server)
-      end
+    if #servers == 0 then
+      return nil
     end
-    if #cwd_matching_servers == 0 then
-      error("No `opencode` servers found in Neovim's CWD: " .. nvim_cwd, 0)
-    end
-    return cwd_matching_servers
+    return servers[1]
   end)
 end
 
@@ -201,7 +186,7 @@ end
 ---
 ---1. The currently subscribed server in `opencode.events`.
 ---2. The configured port in `require("opencode.config").opts.port`.
----3. Any server in Neovim's CWD, prompting the user to select if multiple are found.
+---3. Any running opencode server, using `opencode attach` to connect.
 ---4. Calling `require("opencode.provider").start()` to launch a new server, then retrying the above.
 ---
 ---Upon success, subscribes to the server's events.
@@ -220,21 +205,28 @@ function M.get(launch)
       if priority_port then
         return Promise.resolve(priority_port)
       else
-        return M.get_all_servers_in_nvim_cwd():next(function(servers) ---@param servers opencode.cli.server.Server[]
-          if #servers == 1 then
-            return servers[1].port
-          else
-            return require("opencode.ui.select_server")
-              .select_server(servers)
-              :next(function(selected_server) ---@param selected_server opencode.cli.server.Server
-                return selected_server.port
-              end)
+        return M.get_first_server():next(function(server) ---@param server opencode.cli.server.Server|nil
+          if server then
+            return server
           end
+          error("No `opencode` servers found")
         end)
       end
     end)
-    :next(function(port) ---@param port number
-      return get_server(port)
+    :next(function(server_or_port) ---@param server_or_port number|opencode.cli.server.Server
+      local server
+      local port
+      if type(server_or_port) == "number" then
+        port = server_or_port
+      else
+        server = server_or_port
+        port = server.port
+      end
+      return get_server(port):next(function(s) ---@param s opencode.cli.server.Server
+        local attach_info = server and { port = s.port, cwd = vim.fn.getcwd() } or nil
+        require("opencode.provider").start(attach_info)
+        return s
+      end)
     end)
     :next(function(server) ---@param server opencode.cli.server.Server
       require("opencode.events").connect(server)

@@ -4,6 +4,7 @@
 ---@class opencode.provider.Snacks : opencode.Provider
 ---
 ---@field opts snacks.terminal.Opts
+---@field attach_cmd? string
 local Snacks = {}
 Snacks.__index = Snacks
 Snacks.name = "snacks"
@@ -36,28 +37,39 @@ function Snacks.health()
   return true
 end
 
-function Snacks:get()
+function Snacks:get(cmd)
   ---@type snacks.terminal.Opts
   local opts = vim.tbl_deep_extend("force", self.opts, { create = false })
-  local win = require("snacks.terminal").get(self.cmd, opts)
+  local terminal_cmd = cmd or self.cmd
+  local win = require("snacks.terminal").get(terminal_cmd, opts)
   return win
 end
 
-function Snacks:toggle()
-  require("snacks.terminal").toggle(self.cmd, self.opts)
+function Snacks:toggle(attach_info)
+  local cmd = self:_get_cmd(attach_info)
+  require("snacks.terminal").toggle(cmd, self.opts)
 end
 
-function Snacks:start()
-  if not self:get() then
-    require("snacks.terminal").open(self.cmd, self.opts)
+---@param attach_info? { port: number, cwd: string }
+---@return string
+function Snacks:_get_cmd(attach_info)
+  if attach_info then
+    return string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+  end
+  return self.cmd
+end
+
+---@param attach_info? { port: number, cwd: string }
+function Snacks:start(attach_info)
+  local cmd = self:_get_cmd(attach_info)
+  if not self:get(cmd) then
+    require("snacks.terminal").open(cmd, self.opts)
   end
 end
 
 function Snacks:stop()
   local win = self:get()
   if win then
-    -- TODO: Stop the job first so we don't get error exit code.
-    -- Not sure how to get the job ID from snacks API though.
     win:close()
   end
 end

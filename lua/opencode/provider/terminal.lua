@@ -5,6 +5,7 @@
 ---
 ---@field bufnr? integer
 ---@field winid? integer
+---@field job_id? integer
 local Terminal = {}
 Terminal.__index = Terminal
 Terminal.name = "terminal"
@@ -16,6 +17,7 @@ function Terminal.new(opts)
   self.opts = opts or {}
   self.winid = nil
   self.bufnr = nil
+  self.job_id = nil
   return self
 end
 
@@ -42,12 +44,18 @@ function Terminal:toggle()
 end
 
 ---Open a window with a terminal buffer.
-function Terminal:start()
+---@param attach_info? { port: number, cwd: string } If provided, uses `opencode attach` to connect to an existing server.
+function Terminal:start(attach_info)
   if self.bufnr == nil then
     local previous_win = vim.api.nvim_get_current_win()
 
     self.bufnr = vim.api.nvim_create_buf(true, false)
     self.winid = vim.api.nvim_open_win(self.bufnr, true, self.opts)
+
+    local cmd = self.cmd
+    if attach_info then
+      cmd = string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+    end
 
     -- Redraw terminal buffer on initial render.
     -- Fixes empty columns on the right side.
@@ -74,11 +82,12 @@ function Terminal:start()
       end,
     })
 
-    vim.fn.jobstart(self.cmd, {
+    self.job_id = vim.fn.jobstart(cmd, {
       term = true,
       on_exit = function()
         self.winid = nil
         self.bufnr = nil
+        self.job_id = nil
       end,
     })
 
@@ -88,6 +97,10 @@ end
 
 ---Close the window, delete the buffer.
 function Terminal:stop()
+  if self.job_id ~= nil then
+    vim.fn.jobstop(self.job_id)
+    self.job_id = nil
+  end
   if self.winid ~= nil and vim.api.nvim_win_is_valid(self.winid) then
     vim.api.nvim_win_close(self.winid, true)
     self.winid = nil

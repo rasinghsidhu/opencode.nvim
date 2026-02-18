@@ -23,7 +23,7 @@
 ---Called when attempting to interact with `opencode` but none was found.
 ---`opencode.nvim` then polls for a couple seconds waiting for one to appear.
 ---Should not steal focus by default, if possible.
----@field start? fun(self: opencode.Provider)
+---@field start? fun(self: opencode.Provider, attach_info?: { port: number, cwd: string })
 ---
 ---Stop the previously started `opencode`.
 ---Called when Neovim is exiting.
@@ -77,13 +77,14 @@ function M.toggle()
 end
 
 ---Start `opencode` via the configured provider.
-function M.start()
+---@param attach_info? { port: number, cwd: string } If provided, uses `opencode attach` to connect to an existing server.
+function M.start(attach_info)
   local provider = require("opencode.config").provider
   if provider and provider.start then
     -- TODO: Subscribe immediately.
     -- Ideally, providers expose the PID of the process they started.
     -- Then we decompose server.lua code to go PID -> port (OS dependent... windows impl combines this with the PID step currently) -> server -> connect.
-    provider:start()
+    provider:start(attach_info)
   else
     error("`provider.start` unavailable — run `:checkhealth opencode` for details", 0)
   end

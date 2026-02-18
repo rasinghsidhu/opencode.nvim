@@ -103,7 +103,8 @@ function Wezterm:toggle()
 end
 
 ---Start `opencode` in pane.
-function Wezterm:start()
+---@param attach_info? { port: number, cwd: string }
+function Wezterm:start(attach_info)
   local pane_id = self:get_pane_id()
   if not pane_id then
     local cmd_parts = { "wezterm", "cli", "split-pane" }
@@ -121,8 +122,13 @@ function Wezterm:start()
       table.insert(cmd_parts, "--top-level")
     end
 
+    local cmd = self.cmd
+    if attach_info then
+      cmd = string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+    end
+
     table.insert(cmd_parts, "--")
-    table.insert(cmd_parts, self.cmd)
+    table.insert(cmd_parts, cmd)
 
     local result = vim.fn.system(table.concat(cmd_parts, " "))
     focus_pane(vim.env.WEZTERM_PANE)
