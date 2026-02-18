@@ -232,14 +232,26 @@ function M.get(launch)
       if priority_port then
         return Promise.resolve(priority_port)
       else
-        print("[M.get] calling get_first_server")
-        return M.get_first_server():next(function(server) ---@param server opencode.cli.server.Server|nil
-          print("[M.get] get_first_server returned, server=", server and server.port)
-          if server then
-            return server
-          end
-          error("No `opencode` servers found")
+        -- Call get_first_server synchronously within this callback
+        -- to avoid nested promise vim.schedule issues
+        local server = nil
+        local done = false
+        local err = nil
+        M.get_first_server():next(function(s)
+          server = s
+          done = true
+        end):catch(function(e)
+          err = e
+          done = true
         end)
+        -- Wait synchronously for the result (this is blocking but the promises should resolve quickly)
+        while not done do
+          vim.wait(10, function() return done end)
+        end
+        if err then
+          error("No `opencode` servers found")
+        end
+        return server
       end
     end)
     :next(function(server_or_port) ---@param server_or_port number|opencode.cli.server.Server
