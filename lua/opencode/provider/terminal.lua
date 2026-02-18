@@ -52,13 +52,12 @@ function Terminal:start(attach_info)
     self.bufnr = vim.api.nvim_create_buf(true, false)
     self.winid = vim.api.nvim_open_win(self.bufnr, true, self.opts)
 
+    local opts = require("opencode.config").opts
     local cmd = self.cmd
-    if attach_info then
-      if attach_info.uri then
-        cmd = string.format("opencode attach %s --dir %s", attach_info.uri, attach_info.cwd)
-      else
-        cmd = string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
-      end
+    if opts.uri then
+      cmd = string.format("opencode attach %s --dir %s", opts.uri, vim.fn.getcwd())
+    elseif opts.port then
+      cmd = string.format("opencode attach http://localhost:%d --dir %s", opts.port, vim.fn.getcwd())
     end
 
     -- Redraw terminal buffer on initial render.

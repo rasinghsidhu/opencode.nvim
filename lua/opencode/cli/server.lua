@@ -230,9 +230,9 @@ function M.get(launch)
   local opts = require("opencode.config").opts
 
   -- URI takes precedence - if set, skip all detection and use it directly
+  -- Provider will read uri/port from config directly
   if opts.uri then
-    local attach_info = { uri = opts.uri, cwd = vim.fn.getcwd() }
-    require("opencode.provider").start(attach_info)
+    require("opencode.provider").start()
     return Promise.resolve({ port = 0, cwd = attach_info.cwd }):next(function(server)
       require("opencode.events").connect(server)
       return server
@@ -281,10 +281,8 @@ function M.get(launch)
         server = server_or_port
         port = server.port
       end
-      -- Use server directly, no need to re-verify with get_server
-      -- get_first_server already verified the server responds
-      local attach_info = server and { port = port, cwd = vim.fn.getcwd() } or nil
-      require("opencode.provider").start(attach_info)
+      -- Provider will read uri/port from config directly
+      require("opencode.provider").start()
       return server or { port = port }
     end)
     :next(function(server) ---@param server opencode.cli.server.Server
@@ -299,7 +297,7 @@ function M.get(launch)
 
       return Promise.new(function(resolve, reject)
         if launch then
-          local start_ok, start_result = pcall(require("opencode.provider").start)
+          local start_ok, start_result = pcall(function() require("opencode.provider").start() end)
           if not start_ok then
             return reject("Error starting `opencode`: " .. start_result)
           end

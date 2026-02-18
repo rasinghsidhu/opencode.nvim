@@ -45,26 +45,24 @@ function Snacks:get(cmd)
   return win
 end
 
-function Snacks:toggle(attach_info)
-  local cmd = self:_get_cmd(attach_info)
+function Snacks:toggle()
+  local cmd = self:_get_cmd()
   require("snacks.terminal").toggle(cmd, self.opts)
 end
 
----@param attach_info? { uri?: string, port?: number, cwd: string }
 ---@return string
-function Snacks:_get_cmd(attach_info)
-  if attach_info then
-    if attach_info.uri then
-      return string.format("opencode attach %s --dir %s", attach_info.uri, attach_info.cwd)
-    end
-    return string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+function Snacks:_get_cmd()
+  local opts = require("opencode.config").opts
+  if opts.uri then
+    return string.format("opencode attach %s --dir %s", opts.uri, vim.fn.getcwd())
+  elseif opts.port then
+    return string.format("opencode attach http://localhost:%d --dir %s", opts.port, vim.fn.getcwd())
   end
   return self.cmd
 end
 
----@param attach_info? { uri?: string, port?: number, cwd: string }
-function Snacks:start(attach_info)
-  local cmd = self:_get_cmd(attach_info)
+function Snacks:start()
+  local cmd = self:_get_cmd()
   if not self:get(cmd) then
     require("snacks.terminal").open(cmd, self.opts)
   end
