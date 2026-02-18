@@ -232,7 +232,9 @@ function M.get(launch)
       if priority_port then
         return Promise.resolve(priority_port)
       else
+        print("[M.get] calling get_first_server")
         return M.get_first_server():next(function(server) ---@param server opencode.cli.server.Server|nil
+          print("[M.get] get_first_server returned, server=", server and server.port)
           if server then
             return server
           end
