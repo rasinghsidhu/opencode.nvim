@@ -174,11 +174,38 @@ end
 
 ---@return Promise<opencode.cli.server.Server|nil>
 function M.get_first_server()
-  return get_all_servers():next(function(servers) ---@param servers opencode.cli.server.Server[]
-    if #servers == 0 then
+  local Promise = require("opencode.promise")
+  return Promise.new(function(resolve, reject)
+    local processes
+    if is_windows() then
+      processes = get_processes_windows()
+    else
+      processes = get_processes_unix()
+    end
+    if #processes == 0 then
+      resolve(nil)
+    else
+      resolve(processes)
+    end
+  end):next(function(processes) ---@param processes opencode.cli.server.Process[]
+    if not processes or #processes == 0 then
       return nil
     end
-    return servers[1]
+
+    ---@param process opencode.cli.server.Process
+    local function try_next(i)
+      if i > #processes then
+        return nil
+      end
+      local process = processes[i]
+      return get_server(process.port):next(function(server)
+        return server
+      end):catch(function()
+        return try_next(i + 1)
+      end)
+    end
+
+    return try_next(1)
   end)
 end
 
