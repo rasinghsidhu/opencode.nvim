@@ -249,11 +249,11 @@ function M.get(launch)
         server = server_or_port
         port = server.port
       end
-      return get_server(port):next(function(s) ---@param s opencode.cli.server.Server
-        local attach_info = server and { port = s.port, cwd = vim.fn.getcwd() } or nil
-        require("opencode.provider").start(attach_info)
-        return s
-      end)
+      -- Use server directly, no need to re-verify with get_server
+      -- get_first_server already verified the server responds
+      local attach_info = server and { port = port, cwd = vim.fn.getcwd() } or nil
+      require("opencode.provider").start(attach_info)
+      return server or { port = port }
     end)
     :next(function(server) ---@param server opencode.cli.server.Server
       require("opencode.events").connect(server)
