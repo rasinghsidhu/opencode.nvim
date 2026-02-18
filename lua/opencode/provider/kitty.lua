@@ -96,7 +96,7 @@ function Kitty:toggle()
 end
 
 ---Start `opencode` in window.
----@param attach_info? { port: number, cwd: string }
+---@param attach_info? { uri?: string, port?: number, cwd: string }
 function Kitty:start(attach_info)
   local window_id = self:get_window_id()
   if window_id then
@@ -134,7 +134,11 @@ function Kitty:start(attach_info)
 
   local cmd = self.cmd
   if attach_info then
-    cmd = string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+    if attach_info.uri then
+      cmd = string.format("opencode attach %s --dir %s", attach_info.uri, attach_info.cwd)
+    else
+      cmd = string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+    end
   end
 
   -- Split cmd string into separate arguments for kitty launch

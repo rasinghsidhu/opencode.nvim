@@ -23,7 +23,7 @@
 ---Called when attempting to interact with `opencode` but none was found.
 ---`opencode.nvim` then polls for a couple seconds waiting for one to appear.
 ---Should not steal focus by default, if possible.
----@field start? fun(self: opencode.Provider, attach_info?: { port: number, cwd: string })
+---@field start? fun(self: opencode.Provider, attach_info?: { uri?: string, port?: number, cwd: string })
 ---
 ---Stop the previously started `opencode`.
 ---Called when Neovim is exiting.
@@ -77,7 +77,7 @@ function M.toggle()
 end
 
 ---Start `opencode` via the configured provider.
----@param attach_info? { port: number, cwd: string } If provided, uses `opencode attach` to connect to an existing server.
+---@param attach_info? { uri?: string, port?: number, cwd: string } If provided, uses `opencode attach` to connect to an existing server.
 function M.start(attach_info)
   local provider = require("opencode.config").provider
   if provider and provider.start then

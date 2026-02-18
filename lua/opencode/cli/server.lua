@@ -198,11 +198,13 @@ function M.get_first_server()
         return nil
       end
       local process = processes[i]
-      return get_server(process.port):next(function(server)
-        return server
-      end):catch(function()
-        return try_next(i + 1)
-      end)
+      return get_server(process.port)
+        :next(function(server)
+          return server
+        end)
+        :catch(function()
+          return try_next(i + 1)
+        end)
     end
 
     return try_next(1)
@@ -211,10 +213,11 @@ end
 
 ---Attempt to get the `opencode` server's port. Tries, in order:
 ---
----1. The currently subscribed server in `opencode.events`.
----2. The configured port in `require("opencode.config").opts.port`.
----3. Any running opencode server, using `opencode attach` to connect.
----4. Calling `require("opencode.provider").start()` to launch a new server, then retrying the above.
+---1. The configured URI in `require("opencode.config").opts.uri` (takes precedence).
+---2. The currently subscribed server in `opencode.events`.
+---3. The configured port in `require("opencode.config").opts.port`.
+---4. Any running opencode server, using `opencode attach` to connect.
+---5. Calling `require("opencode.provider").start()` to launch a new server, then retrying the above.
 ---
 ---Upon success, subscribes to the server's events.
 ---
@@ -224,9 +227,20 @@ function M.get(launch)
   launch = launch ~= false
 
   local Promise = require("opencode.promise")
+  local opts = require("opencode.config").opts
+
+  -- URI takes precedence - if set, skip all detection and use it directly
+  if opts.uri then
+    local attach_info = { uri = opts.uri, cwd = vim.fn.getcwd() }
+    require("opencode.provider").start(attach_info)
+    return Promise.resolve({ port = 0, cwd = attach_info.cwd }):next(function(server)
+      require("opencode.events").connect(server)
+      return server
+    end)
+  end
+
   return Promise.resolve(
-    require("opencode.events").connected_server and require("opencode.events").connected_server.port
-      or require("opencode.config").opts.port
+    require("opencode.events").connected_server and require("opencode.events").connected_server.port or opts.port
   )
     :next(function(priority_port) ---@param priority_port number
       if priority_port then
@@ -237,16 +251,20 @@ function M.get(launch)
         local server = nil
         local done = false
         local err = nil
-        M.get_first_server():next(function(s)
-          server = s
-          done = true
-        end):catch(function(e)
-          err = e
-          done = true
-        end)
+        M.get_first_server()
+          :next(function(s)
+            server = s
+            done = true
+          end)
+          :catch(function(e)
+            err = e
+            done = true
+          end)
         -- Wait synchronously for the result (this is blocking but the promises should resolve quickly)
         while not done do
-          vim.wait(10, function() return done end)
+          vim.wait(10, function()
+            return done
+          end)
         end
         if err then
           error("No `opencode` servers found")

@@ -50,16 +50,19 @@ function Snacks:toggle(attach_info)
   require("snacks.terminal").toggle(cmd, self.opts)
 end
 
----@param attach_info? { port: number, cwd: string }
+---@param attach_info? { uri?: string, port?: number, cwd: string }
 ---@return string
 function Snacks:_get_cmd(attach_info)
   if attach_info then
+    if attach_info.uri then
+      return string.format("opencode attach %s --dir %s", attach_info.uri, attach_info.cwd)
+    end
     return string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
   end
   return self.cmd
 end
 
----@param attach_info? { port: number, cwd: string }
+---@param attach_info? { uri?: string, port?: number, cwd: string }
 function Snacks:start(attach_info)
   local cmd = self:_get_cmd(attach_info)
   if not self:get(cmd) then

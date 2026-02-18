@@ -13,9 +13,15 @@ vim.g.opencode_opts = vim.g.opencode_opts
 
 ---@class opencode.Opts
 ---
+---The URI of an existing `opencode` server.
+---If set, `opencode.nvim` will use `opencode attach <uri> --dir <cwd>` to connect.
+---Takes precedence over `port`. Example: `"http://localhost:8080"`.
+---@field uri? string
+---
 ---The port `opencode` is running on.
 ---If `nil`, searches for an `opencode --port` process in Neovim's CWD.
 ---If set, `opencode.nvim` will append `--port <port>` to `provider.cmd`.
+---Ignored if `uri` is set.
 ---@field port? number
 ---
 ---Contexts to inject into prompts, keyed by their placeholder.
@@ -44,6 +50,7 @@ vim.g.opencode_opts = vim.g.opencode_opts
 
 ---@type opencode.Opts
 local defaults = {
+  uri = nil,
   port = nil,
   -- stylua: ignore
   contexts = {
@@ -228,7 +235,7 @@ end
 ---The `opencode` provider resolved from `opts.provider`.
 ---
 ---Retains the base `provider.cmd` if not overridden.
----Sets `--port <port>` in `provider.cmd` if `opts.port` is set.
+---Sets `--port <port>` in `provider.cmd` if `opts.port` is set and `opts.uri` is not set.
 ---@type opencode.Provider|nil
 M.provider = (function()
   local provider
@@ -258,8 +265,9 @@ M.provider = (function()
     provider.cmd = provider.cmd or provider_or_opts.cmd
   end
 
+  -- Only append --port if uri is not set (uri takes precedence)
   local port = M.opts.port
-  if port and provider and provider.cmd then
+  if port and not M.opts.uri and provider and provider.cmd then
     -- Remove any existing `--port` argument to avoid duplicates
     provider.cmd = provider.cmd:gsub("--port ?", "") .. " --port " .. tostring(port)
   end

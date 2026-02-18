@@ -89,7 +89,7 @@ function Tmux:toggle()
 end
 
 ---Start `opencode` in pane.
----@param attach_info? { port: number, cwd: string }
+---@param attach_info? { uri?: string, port?: number, cwd: string }
 function Tmux:start(attach_info)
   local pane_id = self:get_pane_id()
   if not pane_id then
@@ -97,7 +97,11 @@ function Tmux:start(attach_info)
     local detach_flag = self.opts.focus and "" or "-d"
     local cmd = self.cmd
     if attach_info then
-      cmd = string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+      if attach_info.uri then
+        cmd = string.format("opencode attach %s --dir %s", attach_info.uri, attach_info.cwd)
+      else
+        cmd = string.format("opencode attach http://localhost:%d --dir %s", attach_info.port, attach_info.cwd)
+      end
     end
     self.pane_id = vim.fn.system(
       string.format("tmux split-window %s -P -F '#{pane_id}' %s '%s'", detach_flag, self.opts.options or "", cmd)
